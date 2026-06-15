@@ -96,7 +96,7 @@
 
 <div class="container">
     <h2>Транспорт Алматы</h2>
-    <div id="sync-status" class="status">Загрузка актуальных маршрутов...</div>
+    <div id="sync-status" class="status">Синхронизация...</div>
     
     <label for="stopA">Остановка А (Откуда):</label>
     <input type="text" id="stopA" list="stops-list" placeholder="Начните вводить...">
@@ -112,19 +112,20 @@
 </div>
 
 <script>
-    // Встроенная база на случай сбоя сети
+    // Наша подстраховка
     let transitData = {
         "Саяхат": ["12", "32", "73", "92", "118", "201"],
         "ЦУМ": ["32", "92", "201"]
     };
 
-    // Надежный рабочий адрес большой базы данных Алматы
-    const routesUrl = 'https://cdn.jsdelivr.net/gh/mkolpashchikov/almaty-bus-data@main/almaty_routes.json';
+    // Прямой, официальный обходной адрес большой базы без блокировок
+    const routesUrl = 'https://mkolpashchikov.github.io/almaty-bus-data/almaty_routes.json';
 
     async function loadLiveRoutes() {
         const statusDiv = document.getElementById("sync-status");
         try {
-            const response = await fetch(routesUrl);
+            // Добавляем случайное число к запросу, чтобы телефон не брал старое из памяти
+            const response = await fetch(routesUrl + '?v=' + Math.random(), { cache: "no-store" });
             if (response.ok) {
                 const remoteData = await response.json();
                 if (Object.keys(remoteData).length > 0) {
@@ -133,11 +134,11 @@
                     statusDiv.style.color = "#34c759";
                 }
             } else {
-                statusDiv.innerText = "Используются сохранённые данные (офлайн)";
+                statusDiv.innerText = "Режим автономии (локальная база)";
                 statusDiv.style.color = "#ff9500";
             }
         } catch (e) {
-            statusDiv.innerText = "Используются сохранённые данные (офлайн)";
+            statusDiv.innerText = "Режим автономии (локальная база)";
             statusDiv.style.color = "#ff9500";
         }
         rebuildStops();
@@ -168,15 +169,12 @@
             return;
         }
 
-        // Превращаем списки автобусов в массивы для точного поиска
         const busesA = Array.isArray(transitData[stopA]) ? transitData[stopA] : [];
         const busesB = Array.isArray(transitData[stopB]) ? transitData[stopB] : [];
         
-        // Поиск общих автобусов
         const directBuses = busesA.filter(bus => busesB.includes(bus));
 
         if (directBuses.length > 0) {
-            // Сортируем номера для красоты (сначала цифры, потом текст)
             const sortedBuses = directBuses.sort((a, b) => parseInt(a) - parseInt(b));
             resultDiv.innerHTML = `Прямые маршруты:<br><span class='bus-list'>${sortedBuses.join(', ')}</span>`;
         } else {
@@ -184,7 +182,6 @@
         }
     }
 
-    // Запуск программы
     loadLiveRoutes();
 </script>
 
