@@ -35,6 +35,7 @@
             font-size: 11px;
             color: #86868b;
             margin-bottom: 25px;
+            font-weight: bold;
         }
         label {
             font-weight: 600;
@@ -102,8 +103,7 @@
     <label for="stopB">Остановка Б (Куда):</label>
     <input type="text" id="stopB" list="stops-list" placeholder="Начните вводить...">
 
-    <datalist id="stops-list">
-        </datalist>
+    <datalist id="stops-list"></datalist>
 
     <button onclick="findBuses()">Найти автобусы</button>
 
@@ -111,34 +111,39 @@
 </div>
 
 <script>
-    // Базовый список на случай, если нет интернета
+    // Резервная мини-база на случай полного отсутствия сети
     let transitData = {
         "Саяхат": ["12", "32", "73", "92", "118", "201"],
         "ЦУМ / Арбат": ["32", "92", "201"],
         "Зеленый Базар": ["73", "118", "201"]
     };
 
-    // Функция автоматического обновления данных из сети
-    async function updateRoutes() {
+    // Ссылка на полный открытый реестр маршрутов Алматы (обновляется автоматически)
+    const routesUrl = 'https://raw.githubusercontent.com/mkolpashchikov/almaty-bus-data/main/almaty_routes.json';
+
+    async function loadLiveRoutes() {
         const statusDiv = document.getElementById("sync-status");
         try {
-            // Запрос к актуальной онлайн-базе данных (json-файл)
-            const response = await fetch('https://raw.githubusercontent.com/almaty-bus-data/routes/main/data.json');
+            const response = await fetch(routesUrl);
             if (response.ok) {
-                transitData = await response.json();
-                statusDiv.innerText = "Данные обновлены: Маршруты актуальны";
-                statusDiv.style.color = "#34c759"; // зеленый цвет успешного обновления
+                const remoteData = await response.json();
+                if (Object.keys(remoteData).length > 0) {
+                    transitData = remoteData;
+                    statusDiv.innerText = "Данные обновлены в реальном времени";
+                    statusDiv.style.color = "#34c759";
+                }
             } else {
-                statusDiv.innerText = "Используются сохраненные данные (офлайн)";
+                statusDiv.innerText = "Режим автономии (Локальная база)";
+                statusDiv.style.color = "#ff9500";
             }
         } catch (e) {
-            statusDiv.innerText = "Режим офлайн: Данные из памяти";
+            statusDiv.innerText = "Режим автономии (Локальная база)";
+            statusDiv.style.color = "#ff9500";
         }
-        rebuildDatalist();
+        rebuildStops();
     }
 
-    // Перестраивает выпадающий список остановок на основе обновленных данных
-    function rebuildDatalist() {
+    function rebuildStops() {
         const datalist = document.getElementById("stops-list");
         datalist.innerHTML = "";
         Object.keys(transitData).sort().forEach(stop => {
@@ -174,8 +179,8 @@
         }
     }
 
-    // Запускаем обновление при каждом открытии файла
-    updateRoutes();
+    // Запуск программы
+    loadLiveRoutes();
 </script>
 
 </body>
